@@ -7,5 +7,6 @@ Automatic-Module-Name: org.syvasoft.notification
 Bundle-RequiredExecutionEnvironment: JavaSE-11
 Require-Bundle: org.adempiere.base;bundle-version="9.0.0",
  org.adempiere.plugin.utils;bundle-version="9.0.0"
-Service-Component: META-INF/NotificationProcess.xml,
- META-INF/NotificationModel.xml
+Service-Component: OSGi-INF/NotificationProcess.xml,
+ OSGi-INF/NotificationModel.xml, OSGi-INF/NotificationEventHandler.xml
+Import-Package: org.osgi.service.event;version="1.4.0"
