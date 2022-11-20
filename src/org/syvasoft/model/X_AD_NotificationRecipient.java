@@ -19,11 +19,7 @@ package org.syvasoft.model;
 
 import java.sql.ResultSet;
 import java.util.Properties;
-
-import org.compiere.model.I_Persistent;
-import org.compiere.model.MTable;
-import org.compiere.model.PO;
-import org.compiere.model.POInfo;
+import org.compiere.model.*;
 
 /** Generated Model for AD_NotificationRecipient
  *  @author iDempiere (generated) 
@@ -35,7 +31,7 @@ public class X_AD_NotificationRecipient extends PO implements I_AD_NotificationR
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20221011L;
+	private static final long serialVersionUID = 20221120L;
 
     /** Standard Constructor */
     public X_AD_NotificationRecipient (Properties ctx, int AD_NotificationRecipient_ID, String trxName)
@@ -262,5 +258,27 @@ public class X_AD_NotificationRecipient extends PO implements I_AD_NotificationR
 	public String getMobileNo()
 	{
 		return (String)get_Value(COLUMNNAME_MobileNo);
+	}
+
+	/** BCC = B */
+	public static final String RECIPIENTTYPE_BCC = "B";
+	/** CC = C */
+	public static final String RECIPIENTTYPE_CC = "C";
+	/** To = T */
+	public static final String RECIPIENTTYPE_To = "T";
+	/** Set Recipient Type.
+		@param RecipientType Recipient Type
+	*/
+	public void setRecipientType (String RecipientType)
+	{
+
+		set_Value (COLUMNNAME_RecipientType, RecipientType);
+	}
+
+	/** Get Recipient Type.
+		@return Recipient Type	  */
+	public String getRecipientType()
+	{
+		return (String)get_Value(COLUMNNAME_RecipientType);
 	}
 }

@@ -18,21 +18,21 @@ package org.syvasoft.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-
-import org.compiere.model.MTable;
+import org.compiere.model.*;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_NotificationRecipient
  *  @author iDempiere (generated) 
  *  @version Release 9
  */
+@SuppressWarnings("all")
 public interface I_AD_NotificationRecipient 
 {
 
     /** TableName=AD_NotificationRecipient */
     public static final String Table_Name = "AD_NotificationRecipient";
 
-    /** AD_Table_ID=1000042 */
+    /** AD_Table_ID=1000052 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -195,6 +195,15 @@ public interface I_AD_NotificationRecipient
 
 	/** Get Mobile No	  */
 	public String getMobileNo();
+
+    /** Column name RecipientType */
+    public static final String COLUMNNAME_RecipientType = "RecipientType";
+
+	/** Set Recipient Type	  */
+	public void setRecipientType (String RecipientType);
+
+	/** Get Recipient Type	  */
+	public String getRecipientType();
 
     /** Column name Updated */
     public static final String COLUMNNAME_Updated = "Updated";

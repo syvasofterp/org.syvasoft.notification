@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.compiere.model.MSysConfig;
-import org.compiere.util.Env;
 import org.compiere.util.Util;
 
 public class WhatsAppUtil {

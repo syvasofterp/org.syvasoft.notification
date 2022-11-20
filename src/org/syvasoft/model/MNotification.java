@@ -4,16 +4,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
 import org.chatapi.whatsapp.api.WhatsAppUtil;
+import org.compiere.model.MClient;
 import org.compiere.model.MNote;
 import org.compiere.model.MSysConfig;
+import org.compiere.model.MUser;
 import org.compiere.model.Query;
 import org.compiere.util.DB;
+import org.compiere.util.EMail;
 
 public class MNotification extends X_AD_Notification {
 
@@ -50,9 +54,15 @@ public class MNotification extends X_AD_Notification {
 	String Unicode="";
 	boolean EnabledWhatsApp = MSysConfig.getBooleanValue("WHATSAPP_ENABLED", true);
 	
-	public String getSimpleMessageForConfiguredRecipients(String ID) {
+	String fromEmail = null;
+	List<String> _phoneNos = new ArrayList<String>();
+	List<String> _ToEmails = new ArrayList<String>();
+	List<String> _CCEmails = new ArrayList<String>();
+	List<String> _BCCEmails = new ArrayList<String>();
+	
+	public String getMessage(String ID) {
 		
-		int maxRowMsgBody = MSysConfig.getIntValue("SMS_MAX_ROW_FOR_MSG_BODY", 5);
+		int maxRowMsgBody = MSysConfig.getIntValue("SN_MAX_ROW_FOR_MSG_BODY", 5);
 		
 		PreparedStatement pstmt1 =  null;
 		ResultSet rs1 = null;
@@ -139,6 +149,129 @@ public class MNotification extends X_AD_Notification {
 		}		
 	}
 	
+	public String getSubject(String ID) {
+		PreparedStatement pstmt1 =  null;
+		ResultSet rs1 = null;
+		String Subject = getSubjectMsg(); 
+		try	{			
+			
+			pstmt1 = null;
+			rs1 = null;
+			String subSql = getSubjectSql() != null ? getSubjectSql().replace("@ID@", ID) : "";
+			
+			if(subSql != null && hdrSql.length() > 0) {
+				pstmt1 = DB.prepareStatement (subSql, get_TrxName());
+				rs1 = pstmt1.executeQuery();
+				ResultSetMetaData subMD = rs1.getMetaData();					
+				while (rs1.next())
+				{
+					for(int i=1;i<=subMD.getColumnCount();i++) {
+						String columnName = subMD.getColumnName(i); 
+						Subject = Subject.replace("{"+columnName+"}", rs1.getString(columnName));
+					}
+					break;
+				}
+			}
+			
+		}		
+		catch (SQLException e) {
+			
+			throw new DBException(e);
+		}
+		finally	{
+			rs1 = null; pstmt1 = null;			
+		}		
+		
+		return Subject;
+	}
+	
+	public void buildEmails(String ID) {
+		if(!isEmail())
+			return;
+		
+		//From SQL
+		PreparedStatement pstmt =  null;
+		ResultSet rs = null;
+		String recipientSql = getRecipientSQL();
+		try	{			
+						
+			recipientSql = recipientSql != null ? recipientSql.replace("@ID@", ID) : "";
+			
+			if(recipientSql != null && recipientSql.length() > 0) {
+				pstmt = DB.prepareStatement (recipientSql, get_TrxName());
+				rs = pstmt.executeQuery();	
+				
+				ResultSetMetaData subMD = rs.getMetaData();
+				boolean existsRecipientType = false;
+				boolean existsAD_User_ID = false;
+				boolean existsAD_Role_ID = false;
+				boolean existsEmail = false;
+				
+				for(int i=1;i<=subMD.getColumnCount();i++) {
+					String columnName = subMD.getColumnName(i); 
+					if(columnName.toLowerCase().equals("recipienttype")) 
+						existsRecipientType = true;
+					if(columnName.toLowerCase().equals("ad_user_id")) 
+						existsAD_User_ID = true;
+					if(columnName.toLowerCase().equals("ad_role_id")) 
+						existsAD_Role_ID = true;
+					if(columnName.toLowerCase().equals("email")) 
+						existsEmail = true;
+				}
+				
+				while (rs.next()) {
+					try {
+						String recipientType = existsRecipientType ? rs.getString("RecipientType") : "T";
+						int ad_user_id = existsAD_User_ID ? rs.getInt("AD_User_ID") : 0;
+						int ad_role_id = existsAD_Role_ID ? rs.getInt("AD_Role_ID") : 0;
+						String email = existsEmail ?  rs.getString("Email") : "";
+						
+						if(email != null && email.length() > 0) {
+							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_To))
+								_ToEmails.add(email);
+							
+							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_CC))
+								_CCEmails.add(email);
+							
+							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_BCC))
+								_BCCEmails.add(email);
+						}
+						
+						//add from user
+						if(ad_user_id > 0) {
+							MUser u = MUser.get(getCtx(), ad_user_id);
+							if(u.getEMail() != null) {
+								if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_To))
+									_ToEmails.add(u.getEMail());
+								
+								if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_CC))
+									_CCEmails.add(u.getEMail());
+								
+								if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_BCC))
+									_BCCEmails.add(u.getEMail());
+							}								
+						}
+						
+						//add from role
+						
+					}
+					catch(SQLException ex) {
+						log.warning(ex.getMessage());
+					}
+				}
+			}
+			
+		}		
+		catch (SQLException e) {
+			
+			throw new DBException(e);
+		}
+		finally	{
+			rs = null; pstmt = null;			
+		}
+		buildEmails();
+	}
+	
 	public List<MNotificationRecipient> getRecipients() {
 		//Find Receipients
 		List<MNotificationRecipient> recipients = new Query(getCtx(), MNotificationRecipient.Table_Name, "AD_Notification_ID = ?", get_TrxName())
@@ -154,28 +287,146 @@ public class MNotification extends X_AD_Notification {
 	}
 	
 	public void notifyMessage(String ID) {
-		String msg = getSimpleMessageForConfiguredRecipients(ID);
-		
-		for(MNotificationRecipient recipient : getRecipients() ) {
+		String msg = getMessage(ID);		
+		//Send WhatsApp / SMS
+		for(String phoneNo : getPhoneNos()) {
 			if(isWhatsApp() && EnabledWhatsApp) {
 				WhatsAppUtil waUtil = new WhatsAppUtil();
-				waUtil.sendMessage(getAD_Client_ID(), getAD_Org_ID(),getAD_Notification_ID(), recipient.getChatId(), recipient.getMobileNo(), msg);
-			}
-			
-			if(isNoticeFlag()) {
-				MNote note = new MNote(getCtx(), 0, get_TrxName());
-				
-				note.setAD_Org_ID(getAD_Org_ID());
-				note.setAD_Message_ID(getAD_Message_ID());
-				note.setAD_User_ID(getAD_User_ID());
-				note.setAD_Table_ID(getAD_Table_ID());
-				note.setRecord_ID(Integer.parseInt(ID));
-				note.setDescription(getRequiredAction());
-				note.setTextMsg(msg);
-				note.saveEx();
+				waUtil.sendMessage(getAD_Client_ID(), getAD_Org_ID(),getAD_Notification_ID(), null, phoneNo, msg);
 			}
 		}
 		
+		//Send Emails
+		if(isEmail()) {
+			buildEmails(ID);
+			
+			String subject = getSubject(ID);
+			String from = null;
+			MClient client = MClient.get(getAD_Client_ID());
+			EMail mail = client.createEMailFrom(from, null, subject, msg, true);
+			
+			//Set To
+			for(String to : getToEmails())
+				mail.addTo(to);
+			
+			//Set CC
+			for(String cc : getCCEmails())
+				mail.addCc(cc);
+			
+			//Set BCC 
+			for(String bcc : getBCCEmails()) 
+				mail.addBcc(bcc);
+			
+			//Set Attachment
+			
+			//Send Email
+			if (!EMail.SENT_OK.equals(mail.send()))
+			{
+				//Write Log
+			}	
+		}
+		
+		/*
+		if(isNoticeFlag()) {
+			MNote note = new MNote(getCtx(), 0, get_TrxName());
+			
+			note.setAD_Org_ID(getAD_Org_ID());
+			note.setAD_Message_ID(getAD_Message_ID());
+			note.setAD_User_ID(getAD_User_ID());
+			note.setAD_Table_ID(getAD_Table_ID());
+			note.setRecord_ID(Integer.parseInt(ID));
+			note.setDescription(getRequiredAction());
+			note.setTextMsg(msg);
+			note.saveEx();
+		}
+		*/
+		
+		
+	}
+	
+	public void buildPhoneNos() {
+		if(!isWhatsApp())
+			return;
+		
+		//From Recipients
+		for(MNotificationRecipient r : getRecipients()) {
+			if(r.getMobileNo() != null)
+				_phoneNos.add(r.getMobileNo());
+			
+			//add from user
+			
+			// add from roles
+		}
+		
+		
+		//From SQL
+		
+		
+	}
+	
+	public void buildEmails() {
+		if(!isEmail())
+			return;
+		
+		//From Recipients
+		for(MNotificationRecipient r : getRecipients()) {
+			//To
+			if(r.getRecipientType() != null && r.getRecipientType().equals(MNotificationRecipient.RECIPIENTTYPE_To)) {
+				if(r.getEMail() != null)
+					_ToEmails.add(r.getEMail());
+				
+				//add from user
+				
+				//add from roles 
+			}
+			
+			//CC
+			if(r.getRecipientType() != null && r.getRecipientType().equals(MNotificationRecipient.RECIPIENTTYPE_CC)) {
+				if(r.getEMail() != null)
+					_CCEmails.add(r.getEMail());
+				
+				//add from user
+				
+				//add from roles 
+			}
+			
+			//BCC
+			if(r.getRecipientType() != null && r.getRecipientType().equals(MNotificationRecipient.RECIPIENTTYPE_BCC)) {
+				if(r.getEMail() != null)
+					_BCCEmails.add(r.getEMail());
+				
+				//add from user
+				
+				//add from roles
+			}
+			
+		}	
+	}
+	
+	public List<String> getPhoneNos() {
+		if(_phoneNos.size() == 0)
+			buildPhoneNos();
+		
+		return _phoneNos;
+	}
+	
+	public List<String> getToEmails() {
+		if(_ToEmails.size() == 0)
+			buildEmails();
+		
+		return _ToEmails;
+	}
+	
+	public List<String> getCCEmails() {
+		return _CCEmails;
+	}
+	
+	public List<String> getBCCEmails() {
+		return _BCCEmails;
+	}
+	
+	public String getFromEmail() {
+		return null;
 	}
 	
 	public static void notifyMessage(Properties ctx, String Name, String ID, String trxName) {
