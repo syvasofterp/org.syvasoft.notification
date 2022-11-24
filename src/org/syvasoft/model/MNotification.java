@@ -1,5 +1,10 @@
 package org.syvasoft.model;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -10,12 +15,19 @@ import java.util.Properties;
 
 import org.adempiere.exceptions.AdempiereException;
 import org.adempiere.exceptions.DBException;
+import org.apache.tools.ant.Project;
+import org.apache.tools.ant.Target;
+import org.apache.tools.ant.taskdefs.Zip;
 import org.chatapi.whatsapp.api.WhatsAppUtil;
+import org.compiere.model.MAttachment;
+import org.compiere.model.MAttachmentEntry;
 import org.compiere.model.MClient;
+import org.compiere.model.MImage;
 import org.compiere.model.MNote;
 import org.compiere.model.MSysConfig;
 import org.compiere.model.MUser;
 import org.compiere.model.Query;
+import org.compiere.tools.FileUtil;
 import org.compiere.util.DB;
 import org.compiere.util.EMail;
 
@@ -159,7 +171,7 @@ public class MNotification extends X_AD_Notification {
 			rs1 = null;
 			String subSql = getSubjectSql() != null ? getSubjectSql().replace("@ID@", ID) : "";
 			
-			if(subSql != null && hdrSql.length() > 0) {
+			if(subSql != null && subSql.length() > 0) {
 				pstmt1 = DB.prepareStatement (subSql, get_TrxName());
 				rs1 = pstmt1.executeQuery();
 				ResultSetMetaData subMD = rs1.getMetaData();					
@@ -227,6 +239,9 @@ public class MNotification extends X_AD_Notification {
 						String email = existsEmail ?  rs.getString("Email") : "";
 						
 						if(email != null && email.length() > 0) {
+							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_From))
+								fromEmail = email;
+							
 							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_To))
 								_ToEmails.add(email);
 							
@@ -237,7 +252,7 @@ public class MNotification extends X_AD_Notification {
 								_BCCEmails.add(email);
 						}
 						
-						//add from user
+						//add emails from user
 						if(ad_user_id > 0) {
 							MUser u = MUser.get(getCtx(), ad_user_id);
 							if(u.getEMail() != null) {
@@ -318,6 +333,7 @@ public class MNotification extends X_AD_Notification {
 				mail.addBcc(bcc);
 			
 			//Set Attachment
+			mail = setAttachment(mail, ID);
 			
 			//Send Email
 			if (!EMail.SENT_OK.equals(mail.send()))
@@ -340,8 +356,148 @@ public class MNotification extends X_AD_Notification {
 			note.saveEx();
 		}
 		*/
+	}
+	
+	public EMail setAttachment(EMail email, String ID) {
+		PreparedStatement pstmt1 =  null;
+		ResultSet rs1 = null;
+		 
+		try	{			
+			
+			pstmt1 = null;
+			rs1 = null;
+			String attSql = getAttachmentSQL() != null ? getAttachmentSQL().replace("@ID@", ID) : "";
+			
+			if(attSql != null && attSql.length() > 0) {
+				pstmt1 = DB.prepareStatement (attSql, get_TrxName());
+				rs1 = pstmt1.executeQuery();
+				ResultSetMetaData attMD = rs1.getMetaData();
+				
+				boolean existsTableID = false;
+				boolean existsRecordID = false;
+				boolean existsLogoID = false;
+				
+				File zipFile = null;
+				try {
+					zipFile = File.createTempFile("attachment", ".zip");
+				} catch (Throwable e) {
+					throw new AdempiereException("Unable to create temp file", e);
+				}
+				zipFile.delete();
+				
+				int fileCount = 0;
+				
+				for(int i=1;i<=attMD.getColumnCount();i++) {
+					String columnName = attMD.getColumnName(i); 
+					if(columnName.toLowerCase().equals("ad_table_id")) 
+						existsTableID = true;
+					if(columnName.toLowerCase().equals("record_id")) 
+						existsRecordID = true;
+					if(columnName.toLowerCase().equals("logo_id")) 
+						existsLogoID = true;					
+				}
+				File tempfolder = null; 
+				try {
+					Path tempPath = Files.createTempDirectory("att_" + ID);
+					tempfolder = tempPath.toFile();
+				} catch (IOException e1) {
+					throw new AdempiereException("Unable to create temp folder", e1);
+				}
+				
+				while (rs1.next())
+				{
+					//Attach Logo
+					if(existsLogoID) {
+						int logo_id = rs1.getInt("logo_id");
+						MImage img = MImage.get(getCtx(), logo_id);				
+						File image = new File(tempfolder, img.getImageURL());
+						FileOutputStream destinationFileOutputStream  = null;
+						
+						try {
+							image.createNewFile();
+							destinationFileOutputStream = new FileOutputStream(image);
+							byte[] buffer = img.getData();
+							destinationFileOutputStream.write(buffer);
+							if(!isAttachAsZIP())
+								email.addAttachment(image);
+							fileCount++;
+						}				
+						catch( java.io.FileNotFoundException f ) {
+							throw new AdempiereException("File not found exception : " + image.getName() + " : " + f);
+						} 
+						catch( java.io.IOException e ) {
+							throw new AdempiereException("IOException : " + e);
+						} finally {
+							try {
+								if (destinationFileOutputStream != null)
+									destinationFileOutputStream.close();
+							} catch(Exception e) { 
+								throw new AdempiereException("Exception : " + e);
+							}
+						}
+					}
+					
+					//Attach from attachments
+					if(existsTableID && existsRecordID) {
+						int table_id = rs1.getInt("ad_table_id");
+						int record_id = rs1.getInt("record_id");
+						
+						MAttachment att = MAttachment.get(getCtx(), table_id, record_id, get_TrxName());
+						if(att == null)
+							continue;
+						
+						MAttachmentEntry[] entries = att.getEntries();
+						MAttachmentEntry entry = null;
+						int index = 0;
+
+						for (int i = 0; i < entries.length; i++) {
+							entry = entries[i];
+							index = i;
+							File attachedFile = new File(tempfolder, entry.getName());
+							FileUtil.copy(att, attachedFile, index);
+							
+							if(!isAttachAsZIP())
+								email.addAttachment(attachedFile);
+							fileCount++;
+						}
+					}
+					
+					if(isAttachAsZIP()) {
+						if(fileCount == 0)
+							return email;
+						
+						Zip zipper = new Zip();
+						zipper.setDestFile(zipFile);
+						zipper.setBasedir(tempfolder);
+						zipper.setUpdate(true);
+						zipper.setCompress(true);
+						zipper.setCaseSensitive(false);
+						zipper.setFilesonly(true);
+						zipper.setTaskName("zip");
+						zipper.setTaskType("zip");
+						zipper.setProject(new Project());
+						zipper.setOwningTarget(new Target());
+						zipper.execute();
+
+						try {
+							FileUtil.deleteDirectory(tempfolder);
+						} catch (IOException e) {}
+						
+						email.addAttachment(zipFile);
+					}
+				}
+			}
+			
+		}		
+		catch (SQLException e) {
+			
+			throw new DBException(e);
+		}
+		finally	{
+			rs1 = null; pstmt1 = null;			
+		}		
 		
-		
+		return email;
 	}
 	
 	public void buildPhoneNos() {
@@ -370,6 +526,20 @@ public class MNotification extends X_AD_Notification {
 		
 		//From Recipients
 		for(MNotificationRecipient r : getRecipients()) {
+			//From
+			if(r.getRecipientType() != null && r.getRecipientType().equals(MNotificationRecipient.RECIPIENTTYPE_From)) {
+				if(r.getEMail() != null)
+					fromEmail = r.getEMail();
+				
+				//add from user
+				if(r.getAD_User_ID() > 0) {
+					MUser u = MUser.get(getCtx(), r.getAD_User_ID());
+					if(u.getEMail() != null)
+						fromEmail = u.getEMail();
+				}
+				
+			}
+			
 			//To
 			if(r.getRecipientType() != null && r.getRecipientType().equals(MNotificationRecipient.RECIPIENTTYPE_To)) {
 				if(r.getEMail() != null)
@@ -398,7 +568,7 @@ public class MNotification extends X_AD_Notification {
 				//add from user
 				
 				//add from roles
-			}
+			}			
 			
 		}	
 	}

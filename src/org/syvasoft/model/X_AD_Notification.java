@@ -19,11 +19,7 @@ package org.syvasoft.model;
 
 import java.sql.ResultSet;
 import java.util.Properties;
-
-import org.compiere.model.I_Persistent;
-import org.compiere.model.MTable;
-import org.compiere.model.PO;
-import org.compiere.model.POInfo;
+import org.compiere.model.*;
 
 /** Generated Model for AD_Notification
  *  @author iDempiere (generated) 
@@ -35,7 +31,7 @@ public class X_AD_Notification extends PO implements I_AD_Notification, I_Persis
 	/**
 	 *
 	 */
-	private static final long serialVersionUID = 20221011L;
+	private static final long serialVersionUID = 20221122L;
 
     /** Standard Constructor */
     public X_AD_Notification (Properties ctx, int AD_Notification_ID, String trxName)
@@ -201,6 +197,43 @@ public class X_AD_Notification extends PO implements I_AD_Notification, I_Persis
 		if (ii == null)
 			 return 0;
 		return ii.intValue();
+	}
+
+	/** Set Attach as ZIP.
+		@param AttachAsZIP Attach as ZIP
+	*/
+	public void setAttachAsZIP (boolean AttachAsZIP)
+	{
+		set_Value (COLUMNNAME_AttachAsZIP, Boolean.valueOf(AttachAsZIP));
+	}
+
+	/** Get Attach as ZIP.
+		@return Attach as ZIP	  */
+	public boolean isAttachAsZIP()
+	{
+		Object oo = get_Value(COLUMNNAME_AttachAsZIP);
+		if (oo != null) 
+		{
+			 if (oo instanceof Boolean) 
+				 return ((Boolean)oo).booleanValue(); 
+			return "Y".equals(oo);
+		}
+		return false;
+	}
+
+	/** Set Attachment SQL.
+		@param AttachmentSQL Attachment SQL
+	*/
+	public void setAttachmentSQL (String AttachmentSQL)
+	{
+		set_Value (COLUMNNAME_AttachmentSQL, AttachmentSQL);
+	}
+
+	/** Get Attachment SQL.
+		@return Attachment SQL	  */
+	public String getAttachmentSQL()
+	{
+		return (String)get_Value(COLUMNNAME_AttachmentSQL);
 	}
 
 	/** Set Change Record.

@@ -18,21 +18,21 @@ package org.syvasoft.model;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
-
-import org.compiere.model.MTable;
+import org.compiere.model.*;
 import org.compiere.util.KeyNamePair;
 
 /** Generated Interface for AD_Notification
  *  @author iDempiere (generated) 
  *  @version Release 9
  */
+@SuppressWarnings("all")
 public interface I_AD_Notification 
 {
 
     /** TableName=AD_Notification */
     public static final String Table_Name = "AD_Notification";
 
-    /** AD_Table_ID=1000041 */
+    /** AD_Table_ID=1000051 */
     public static final int Table_ID = MTable.getTable_ID(Table_Name);
 
     KeyNamePair Model = new KeyNamePair(Table_ID, Table_Name);
@@ -126,6 +126,24 @@ public interface I_AD_Notification
 	public int getAD_User_ID();
 
 	public org.compiere.model.I_AD_User getAD_User() throws RuntimeException;
+
+    /** Column name AttachAsZIP */
+    public static final String COLUMNNAME_AttachAsZIP = "AttachAsZIP";
+
+	/** Set Attach as ZIP	  */
+	public void setAttachAsZIP (boolean AttachAsZIP);
+
+	/** Get Attach as ZIP	  */
+	public boolean isAttachAsZIP();
+
+    /** Column name AttachmentSQL */
+    public static final String COLUMNNAME_AttachmentSQL = "AttachmentSQL";
+
+	/** Set Attachment SQL	  */
+	public void setAttachmentSQL (String AttachmentSQL);
+
+	/** Get Attachment SQL	  */
+	public String getAttachmentSQL();
 
     /** Column name ChangeRecord */
     public static final String COLUMNNAME_ChangeRecord = "ChangeRecord";

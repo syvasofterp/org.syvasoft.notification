@@ -264,6 +264,8 @@ public class X_AD_NotificationRecipient extends PO implements I_AD_NotificationR
 	public static final String RECIPIENTTYPE_BCC = "B";
 	/** CC = C */
 	public static final String RECIPIENTTYPE_CC = "C";
+	/** From = F */
+	public static final String RECIPIENTTYPE_From = "T";
 	/** To = T */
 	public static final String RECIPIENTTYPE_To = "T";
 	/** Set Recipient Type.

@@ -9,4 +9,6 @@ Require-Bundle: org.adempiere.base;bundle-version="9.0.0",
  org.adempiere.plugin.utils;bundle-version="9.0.0"
 Service-Component: OSGi-INF/NotificationProcess.xml,
  OSGi-INF/NotificationModel.xml, OSGi-INF/NotificationEventHandler.xml
-Import-Package: org.osgi.service.event;version="1.4.0"
+Import-Package: org.apache.tools.ant;version="1.10.10",
+ org.apache.tools.ant.taskdefs;version="1.10.10",
+ org.osgi.service.event;version="1.4.0"
