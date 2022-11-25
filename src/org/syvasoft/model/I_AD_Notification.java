@@ -28,7 +28,7 @@ import org.compiere.util.KeyNamePair;
 @SuppressWarnings("all")
 public interface I_AD_Notification 
 {
-
+ 
     /** TableName=AD_Notification */
     public static final String Table_Name = "AD_Notification";
 

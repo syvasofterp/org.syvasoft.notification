@@ -331,7 +331,7 @@ public class MNotification extends X_AD_Notification {
 			//Set BCC 
 			for(String bcc : getBCCEmails()) 
 				mail.addBcc(bcc);
-			
+			 
 			//Set Attachment
 			mail = setAttachment(mail, ID);
 			
@@ -376,15 +376,9 @@ public class MNotification extends X_AD_Notification {
 				boolean existsTableID = false;
 				boolean existsRecordID = false;
 				boolean existsLogoID = false;
+				boolean existsZipfilename = false;
 				
-				File zipFile = null;
-				try {
-					zipFile = File.createTempFile("attachment", ".zip");
-				} catch (Throwable e) {
-					throw new AdempiereException("Unable to create temp file", e);
-				}
-				zipFile.delete();
-				
+								
 				int fileCount = 0;
 				
 				for(int i=1;i<=attMD.getColumnCount();i++) {
@@ -394,7 +388,9 @@ public class MNotification extends X_AD_Notification {
 					if(columnName.toLowerCase().equals("record_id")) 
 						existsRecordID = true;
 					if(columnName.toLowerCase().equals("logo_id")) 
-						existsLogoID = true;					
+						existsLogoID = true;
+					if(columnName.toLowerCase().equals("zipfilename"))
+						existsZipfilename = true;
 				}
 				File tempfolder = null; 
 				try {
@@ -465,6 +461,17 @@ public class MNotification extends X_AD_Notification {
 					if(isAttachAsZIP()) {
 						if(fileCount == 0)
 							return email;
+						String zipFileName = "attachment";
+						if(existsZipfilename) {
+							zipFileName = rs1.getString("zipfilename");
+						}
+						File zipFile = null;
+						try {
+							zipFile = File.createTempFile(zipFileName, ".zip");
+						} catch (Throwable e) {
+							throw new AdempiereException("Unable to create temp file", e);
+						}
+						zipFile.delete();
 						
 						Zip zipper = new Zip();
 						zipper.setDestFile(zipFile);
@@ -478,13 +485,14 @@ public class MNotification extends X_AD_Notification {
 						zipper.setProject(new Project());
 						zipper.setOwningTarget(new Target());
 						zipper.execute();
-
-						try {
-							FileUtil.deleteDirectory(tempfolder);
-						} catch (IOException e) {}
 						
 						email.addAttachment(zipFile);
 					}
+					
+					try {
+						FileUtil.deleteDirectory(tempfolder);
+					} catch (IOException e) {}
+					
 				}
 			}
 			
