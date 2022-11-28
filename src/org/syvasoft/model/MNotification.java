@@ -316,9 +316,9 @@ public class MNotification extends X_AD_Notification {
 			buildEmails(ID);
 			
 			String subject = getSubject(ID);
-			String from = null;
+			String from = fromEmail;
 			MClient client = MClient.get(getAD_Client_ID());
-			EMail mail = client.createEMailFrom(from, null, subject, msg, true);
+			EMail mail = client.createEMailFrom(from, " ", subject, msg, true);
 			
 			//Set To
 			for(String to : getToEmails())
@@ -405,30 +405,32 @@ public class MNotification extends X_AD_Notification {
 					//Attach Logo
 					if(existsLogoID) {
 						int logo_id = rs1.getInt("logo_id");
-						MImage img = MImage.get(getCtx(), logo_id);				
-						File image = new File(tempfolder, img.getImageURL());
-						FileOutputStream destinationFileOutputStream  = null;
-						
-						try {
-							image.createNewFile();
-							destinationFileOutputStream = new FileOutputStream(image);
-							byte[] buffer = img.getData();
-							destinationFileOutputStream.write(buffer);
-							if(!isAttachAsZIP())
-								email.addAttachment(image);
-							fileCount++;
-						}				
-						catch( java.io.FileNotFoundException f ) {
-							throw new AdempiereException("File not found exception : " + image.getName() + " : " + f);
-						} 
-						catch( java.io.IOException e ) {
-							throw new AdempiereException("IOException : " + e);
-						} finally {
+						if(logo_id > 0) {						
+							MImage img = MImage.get(getCtx(), logo_id);				
+							File image = new File(tempfolder, img.getImageURL());
+							FileOutputStream destinationFileOutputStream  = null;
+							
 							try {
-								if (destinationFileOutputStream != null)
-									destinationFileOutputStream.close();
-							} catch(Exception e) { 
-								throw new AdempiereException("Exception : " + e);
+								image.createNewFile();
+								destinationFileOutputStream = new FileOutputStream(image);
+								byte[] buffer = img.getData();
+								destinationFileOutputStream.write(buffer);
+								if(!isAttachAsZIP())
+									email.addAttachment(image);
+								fileCount++;
+							}				
+							catch( java.io.FileNotFoundException f ) {
+								throw new AdempiereException("File not found exception : " + image.getName() + " : " + f);
+							} 
+							catch( java.io.IOException e ) {
+								throw new AdempiereException("IOException : " + e);
+							} finally {
+								try {
+									if (destinationFileOutputStream != null)
+										destinationFileOutputStream.close();
+								} catch(Exception e) { 
+									throw new AdempiereException("Exception : " + e);
+								}
 							}
 						}
 					}
@@ -453,7 +455,7 @@ public class MNotification extends X_AD_Notification {
 							FileUtil.copy(att, attachedFile, index);
 							
 							if(!isAttachAsZIP())
-								email.addAttachment(attachedFile);
+								email.addAttachment(attachedFile);							
 							fileCount++;
 						}
 					}
@@ -490,7 +492,8 @@ public class MNotification extends X_AD_Notification {
 					}
 					
 					try {
-						FileUtil.deleteDirectory(tempfolder);
+						if(isAttachAsZIP())
+							FileUtil.deleteDirectory(tempfolder);
 					} catch (IOException e) {}
 					
 				}
