@@ -236,7 +236,10 @@ public class MNotification extends X_AD_Notification {
 						String recipientType = existsRecipientType ? rs.getString("RecipientType") : "T";
 						int ad_user_id = existsAD_User_ID ? rs.getInt("AD_User_ID") : 0;
 						int ad_role_id = existsAD_Role_ID ? rs.getInt("AD_Role_ID") : 0;
+						MUser u = MUser.get(getCtx(), ad_user_id);
 						String email = existsEmail ?  rs.getString("Email") : "";
+						if(email == null)
+							email = u.getEMail();
 						
 						if(email != null && email.length() > 0) {
 							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_From))
@@ -254,7 +257,7 @@ public class MNotification extends X_AD_Notification {
 						
 						//add emails from user
 						if(ad_user_id > 0) {
-							MUser u = MUser.get(getCtx(), ad_user_id);
+							u = MUser.get(getCtx(), ad_user_id);
 							if(u.getEMail() != null) {
 								if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_To))
 									_ToEmails.add(u.getEMail());
