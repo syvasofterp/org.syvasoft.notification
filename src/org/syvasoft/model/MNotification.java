@@ -241,6 +241,8 @@ public class MNotification extends X_AD_Notification {
 						if(email == null)
 							email = u.getEMail();
 						
+						System.out.println(" Email: " + email);
+						
 						if(email != null && email.length() > 0) {
 							if(recipientType.equals(MNotificationRecipient.RECIPIENTTYPE_From))
 								fromEmail = email;
